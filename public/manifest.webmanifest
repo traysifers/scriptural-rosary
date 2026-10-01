@@ -1,0 +1,12 @@
+{
+  "name": "Scriptural Rosary",
+  "short_name": "Rosary",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f1116",
+  "theme_color": "#0f1116",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" data-standalone>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" data-standalone>
+<meta name="apple-mobile-web-app-capable" content="yes" data-standalone>
+<meta name="mobile-web-app-capable" content="yes" data-standalone>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" data-standalone>
+<meta name="apple-mobile-web-app-title" content="Rosary" data-standalone>
+<link rel="manifest" href="manifest.webmanifest" data-standalone>
+<link rel="icon" href="icon.svg" type="image/svg+xml" data-standalone>
+<link rel="apple-touch-icon" href="icon-180.png" data-standalone>
+<style data-standalone>
+  html { box-sizing: border-box; height: 100%; padding: env(safe-area-inset-top, 0px) 0 0; }
+  body { margin: 0; }
+</style>
+<title>Scriptural Rosary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Marcellus&display=swap">
+<style>
+  /* Layout: one screen. Header names the day's set, a horizontal snap track holds the five
+     mysteries (each scrolls vertically on its own), and five beads on a cord mark the decade. */
+  :root {
+    --ground: #f1f2f4;
+    --surface: #ffffff;
+    --ink: #1b1e25;
+    --muted: #5b6170;
+    --rule: #d6d9e0;
+    --scrim: rgba(16, 18, 23, 0.45);
+    --on-accent: #ffffff;
+    --acc-joyful: #2c5a9c;
+    --acc-luminous: #17727e;
+    --acc-sorrowful: #683779;
+    --acc-glorious: #8f6b12;
+
+    --font-display: "Marcellus", "Trajan Pro", "Optima", Georgia, serif;
+    --font-text: "Literata", "Iowan Old Style", "Palatino", Georgia, serif;
+
+    --accent: var(--acc-joyful);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0f1116;
+      --surface: #171a21;
+      --ink: #e7e5e0;
+      --muted: #969cab;
+      --rule: #2a2f3a;
+      --scrim: rgba(0, 0, 0, 0.6);
+      --on-accent: #0f1116;
+      --acc-joyful: #93b5ea;
+      --acc-luminous: #7fcad2;
+      --acc-sorrowful: #c7a0d6;
+      --acc-glorious: #e3c26e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0f1116;
+    --surface: #171a21;
+    --ink: #e7e5e0;
+    --muted: #969cab;
+    --rule: #2a2f3a;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --on-accent: #0f1116;
+    --acc-joyful: #93b5ea;
+    --acc-luminous: #7fcad2;
+    --acc-sorrowful: #c7a0d6;
+    --acc-glorious: #e3c26e;
+    color-scheme: dark;
+  }
+
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-text);
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body[data-set="joyful"] { --accent: var(--acc-joyful); }
+  body[data-set="luminous"] { --accent: var(--acc-luminous); }
+  body[data-set="sorrowful"] { --accent: var(--acc-sorrowful); }
+  body[data-set="glorious"] { --accent: var(--acc-glorious); }
+
+  button { font: inherit; color: inherit; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .app { height: 100%; display: flex; flex-direction: column; }
+
+  /* Header */
+  .bar {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .when { min-width: 0; }
+  .day {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .set-name {
+    margin: 2px 0 0;
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 1.35rem; line-height: 1.2;
+    color: var(--accent);
+    text-wrap: balance;
+  }
+  .set-btn {
+    flex: none;
+    background: none; border: 1px solid var(--rule); border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.85rem; color: var(--muted);
+    cursor: pointer;
+  }
+
+  /* Swipe track */
+  .track {
+    flex: 1; min-height: 0;
+    display: flex;
+    overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .track::-webkit-scrollbar { display: none; }
+  .slide {
+    flex: 0 0 100%; min-width: 0;
+    scroll-snap-align: start; scroll-snap-stop: always;
+    overflow-y: auto; overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .slide-inner {
+    max-width: 38rem; margin: 0 auto;
+    padding: 26px 20px 40px;
+    display: flex; flex-direction: column; gap: 22px;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent);
+  }
+  .title {
+    margin: 6px 0 0;
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(1.7rem, 7vw, 2.3rem); line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .fruit { display: flex; flex-direction: column; gap: 4px; }
+  .label {
+    font-family: var(--font-display);
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .virtue { margin: 0; font-size: 1.15rem; line-height: 1.45; font-weight: 600; }
+  .virtue .alt { font-weight: 400; font-style: italic; color: var(--muted); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid var(--rule); background: var(--surface);
+    border-radius: 999px; padding: 7px 14px;
+    font-size: 0.88rem; font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background-color .15s, color .15s, border-color .15s;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+  }
+
+  .reading { border-top: 1px solid var(--rule); padding-top: 18px; }
+  .ref {
+    margin: 0 0 12px;
+    font-family: var(--font-display);
+    font-size: 0.95rem; letter-spacing: 0.04em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .text p {
+    margin: 0 0 0.9em;
+    font-size: 1.125rem; line-height: 1.7;
+    max-width: 65ch;
+  }
+  .text sup {
+    font-size: 0.6em; line-height: 0;
+    color: var(--muted);
+    margin-right: 0.2em;
+    font-variant-numeric: tabular-nums;
+  }
+  .text .ch {
+    font-family: var(--font-display);
+    font-size: 1.5em; line-height: 1;
+    color: var(--accent);
+    margin-right: 0.25em;
+  }
+  .text .poem .ln { display: block; padding-left: 1.5em; text-indent: -1.5em; }
+  .text .gap { text-align: center; color: var(--muted); letter-spacing: 0.4em; }
+  .pending {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px dashed var(--rule); border-radius: 10px;
+    color: var(--muted); font-size: 0.95rem; line-height: 1.55;
+  }
+
+  /* Beads */
+  .foot {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--rule);
+  }
+  .arrow {
+    width: 44px; height: 44px;
+    background: none; border: 0; border-radius: 50%;
+    font-family: var(--font-display); font-size: 1.6rem; line-height: 1;
+    color: var(--muted); cursor: pointer;
+  }
+  .arrow:disabled { opacity: 0.25; cursor: default; }
+  .beads {
+    position: relative;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 6px;
+  }
+  .beads::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 50%;
+    border-top: 1px solid var(--rule);
+  }
+  .bead {
+    position: relative;
+    width: 30px; height: 30px; padding: 0;
+    background: none; border: 0; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .bead::after {
+    content: ""; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--ground); border: 1.5px solid var(--muted);
+    transition: transform .2s, background-color .2s, border-color .2s;
+  }
+  .bead[aria-current="step"]::after {
+    background: var(--accent); border-color: var(--accent); transform: scale(1.45);
+  }
+
+  /* Set picker */
+  .sheet {
+    position: fixed; inset: 0; z-index: 10;
+    background: var(--scrim);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .panel {
+    width: 100%; max-width: 32rem;
+    background: var(--surface);
+    border-radius: 18px 18px 0 0;
+    padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .panel h2 {
+    margin: 0 4px 8px;
+    font-family: var(--font-display); font-weight: 400; font-size: 1.1rem;
+  }
+  .opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; text-align: left;
+    background: none; border: 1px solid transparent; border-radius: 12px;
+    padding: 12px 14px; cursor: pointer;
+  }
+  .opt[aria-current="true"] { border-color: var(--rule); background: var(--ground); }
+  .opt-name { font-family: var(--font-display); font-size: 1.1rem; }
+  .opt-days { font-size: 0.85rem; color: var(--muted); }
+  .opt-today {
+    font-family: var(--font-display); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-left: 8px;
+  }
+  .opt[data-set="joyful"] .opt-name { color: var(--acc-joyful); }
+  .opt[data-set="luminous"] .opt-name { color: var(--acc-luminous); }
+  .opt[data-set="sorrowful"] .opt-name { color: var(--acc-sorrowful); }
+  .opt[data-set="glorious"] .opt-name { color: var(--acc-glorious); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chip, .bead::after { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="when">
+      <span class="day" id="day"></span>
+      <h1 class="set-name" id="setName"></h1>
+    </div>
+    <button class="set-btn" id="setBtn" type="button" aria-haspopup="dialog">Change</button>
+  </header>
+
+  <main class="track" id="track" aria-live="polite"></main>
+
+  <footer class="foot">
+    <button class="arrow" id="prev" type="button" aria-label="Previous mystery">‹</button>
+    <div class="beads" id="beads"></div>
+    <button class="arrow" id="next" type="button" aria-label="Next mystery">›</button>
+  </footer>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Choose mysteries</h2>
+    <div id="opts"></div>
+  </div>
+</div>
+
+<script src="scripture.js" data-standalone></script>
+<script>
+(function () {
+  "use strict";
+
+  // A passage is one book with one or more [chapter, fromVerse, toVerse] spans.
+  // [chapter] alone means the whole chapter.
+  function P(book) { return { book: book, spans: Array.prototype.slice.call(arguments, 1) }; }
+
+  var SETS = {
+    joyful: {
+      name: "Joyful", days: "Monday · Saturday",
+      mysteries: [
+        { title: "The Annunciation", fruit: ["Humility"],
+          passages: [P("Luke", [1, 26, 38])] },
+        { title: "The Visitation of Mary to Elizabeth", fruit: ["Charity", "Love of Neighbor"],
+          passages: [P("Luke", [1, 39, 45]), P("Luke", [1, 46, 56])] },
+        { title: "The Nativity", fruit: ["Poverty", "Detachment of Worldly Things"],
+          passages: [P("Luke", [2, 6, 19]), P("Matthew", [2, 1, 11])] },
+        { title: "The Presentation of Jesus in the Temple", fruit: ["Obedience to the Law"],
+          passages: [P("Luke", [2, 22, 38])] },
+        { title: "The Finding of the Child Jesus in the Temple", fruit: ["Piety", "Moral Wisdom"],
+          passages: [P("Luke", [2, 41, 52])] }
+      ]
+    },
+    luminous: {
+      name: "Luminous", days: "Thursday",
+      mysteries: [
+        { title: "The Baptism in the Jordan", fruit: ["Openness to the Spirit", "Docility"],
+          passages: [P("Matthew", [3, 5, 17])] },
+        { title: "The Wedding Feast at Cana", fruit: ["Fidelity", "Seeking Jesus through Mary"],
+          passages: [P("John", [2, 1, 11])] },
+        { title: "The Proclamation of the Kingdom of Heaven", fruit: ["Repentance", "Conversion of Heart"],
+          passages: [P("Matthew", [4, 17, 17], [5, 1, 20]), P("Matthew", [10, 7, 8])] },
+        { title: "The Transfiguration", fruit: ["Spiritual Courage", "Desire for Holiness and Sainthood"],
+          passages: [P("Matthew", [17, 1, 8]), P("Luke", [9, 28, 36])] },
+        { title: "The Institution of the Eucharist", fruit: ["Adoration", "Active Participation in the Holy Mass"],
+          passages: [P("Matthew", [26, 26, 28]), P("Luke", [22, 19, 20]), P("John", [6, 51, 59]),
+                     P("1 Corinthians", [11, 23, 29])] }
+      ]
+    },
+    sorrowful: {
+      name: "Sorrowful", days: "Tuesday · Friday",
+      mysteries: [
+        { title: "The Agony in the Garden", fruit: ["Conformity to God’s Will", "Sorrow for Sin"],
+          passages: [P("Matthew", [26, 36, 46]), P("Luke", [22, 39, 46])] },
+        { title: "The Scourging at the Pillar", fruit: ["Purity", "Spirit of Mortification"],
+          passages: [P("Isaiah", [53, 3, 8]), P("John", [18, 36, 37], [19, 1, 1])] },
+        { title: "The Crowning with Thorns", fruit: ["Moral Courage", "Honoring Christ’s Kingship"],
+          passages: [P("Matthew", [27, 27, 30]), P("John", [18, 36, 38], [19, 1, 5])] },
+        { title: "The Carrying of the Heavy Cross", fruit: ["Perseverance in Adversity", "Patience"],
+          passages: [P("Luke", [23, 26, 31]), P("John", [19, 17, 17])] },
+        { title: "The Crucifixion", fruit: ["Salvation of the World", "Forgiveness of Sins"],
+          passages: [P("Luke", [23, 33, 49]), P("Matthew", [27, 33, 54])] }
+      ]
+    },
+    glorious: {
+      name: "Glorious", days: "Wednesday · Sunday",
+      mysteries: [
+        { title: "The Resurrection", fruit: ["Faith in God’s Promise"],
+          passages: [P("Matthew", [28, 1, 8]), P("Mark", [16, 6, 6]), P("Luke", [24, 1, 8])] },
+        { title: "The Ascension", fruit: ["Hope for Heaven"],
+          passages: [P("Mark", [16, 19, 19]), P("Luke", [24, 50, 53])] },
+        { title: "The Descent of the Holy Spirit at Pentecost", fruit: ["Zeal for God’s Mission", "Unity among All Christians"],
+          passages: [P("Acts", [2, 1, 13])] },
+        { title: "The Assumption", fruit: ["The Grace of a Holy Death"],
+          passages: [P("Judith", [15, 9, 10]), P("Acts", [2, 26, 28]), P("Revelation", [11, 19, 19])] },
+        { title: "The Coronation of Mary as Queen of Heaven and Earth", fruit: ["Marian Devotion", "Trust in Mary’s Intercession"],
+          passages: [P("Sirach", [24, 24, 27]), P("Judith", [13, 23, 23], [13, 25, 25], [13, 31, 31]), P("Revelation", [12, 1, 1])] }
+      ]
+    }
+  };
+  var ORDER = ["joyful", "luminous", "sorrowful", "glorious"];
+  var BY_WEEKDAY = ["glorious", "joyful", "sorrowful", "glorious", "luminous", "sorrowful", "joyful"];
+  var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var ORDINALS = ["First", "Second", "Third", "Fourth", "Fifth"];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var track = $("track"), beads = $("beads"), sheet = $("sheet");
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var state = { set: null, index: 0, chosen: [], weekday: new Date().getDay() };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function refLabel(p) {
+    var out = "", prevCh = null;
+    p.spans.forEach(function (s) {
+      var ch = s[0], a = s[1], b = s[2];
+      if (a == null) { out += (out ? "; " : "") + ch; prevCh = ch; return; }
+      var v = (b != null && b !== a) ? a + "–" + b : String(a);
+      out += ch === prevCh ? ", " + v : (out ? "; " : "") + ch + ":" + v;
+      prevCh = ch;
+    });
+    return p.book + " " + out;
+  }
+
+  // Verse text may begin with "¶" (new paragraph) or "\n" (new poetry line); "\n" inside a verse is a line break.
+  function passageHTML(p) {
+    var book = (window.SCRIPTURE || {})[p.book] || {};
+    // cur holds the open paragraph as lines; each line is a list of HTML fragments.
+    var paras = [], cur = [[]], found = 0, lastCh = null, lastV = null;
+    var multiChapter = p.spans.some(function (s) { return s[0] !== p.spans[0][0] || s[1] == null; });
+
+    function flush() {
+      var lines = cur.filter(function (l) { return l.length; }).map(function (l) { return l.join(" "); });
+      if (lines.length > 1) {
+        paras.push('<p class="poem">' + lines.map(function (l) { return '<span class="ln">' + l + "</span>"; }).join("") + "</p>");
+      } else if (lines.length) {
+        paras.push("<p>" + lines[0] + "</p>");
+      }
+      cur = [[]];
+    }
+
+    p.spans.forEach(function (s, si) {
+      var ch = s[0], chap = book[ch] || {}, verses = [];
+      if (s[1] == null) {
+        verses = Object.keys(chap).map(Number).sort(function (x, y) { return x - y; });
+      } else {
+        for (var v = s[1]; v <= (s[2] == null ? s[1] : s[2]); v++) verses.push(v);
+      }
+      if (si > 0) {
+        flush();
+        if (ch === lastCh && verses[0] !== lastV + 1) paras.push('<p class="gap" aria-hidden="true">· · ·</p>');
+      }
+      verses.forEach(function (v, vi) {
+        var t = chap[v];
+        if (t == null) return;
+        found++;
+        t = String(t);
+        if (t.charAt(0) === "¶") { flush(); t = t.slice(1); }
+        else if (t.charAt(0) === "\n") { cur.push([]); t = t.slice(1); }
+        var lead = (multiChapter && ch !== lastCh && vi === 0) ? '<span class="ch">' + ch + "</span>" : "";
+        esc(t).split("\n").forEach(function (line, li) {
+          if (li > 0) cur.push([]);
+          cur[cur.length - 1].push((li === 0 ? lead + "<sup>" + v + "</sup>" : "") + line);
+        });
+        lastCh = ch; lastV = v;
+      });
+      lastCh = ch; lastV = verses[verses.length - 1];
+    });
+    flush();
+
+    if (!found) {
+      return '<p class="pending">The text for ' + esc(refLabel(p)) + " isn’t available.</p>";
+    }
+    return paras.join("");
+  }
+
+  function fruitHTML(f) {
+    return esc(f[0]) + (f[1] ? ' <span class="alt">(' + esc(f[1]) + ")</span>" : "");
+  }
+
+  function slideHTML(m, i) {
+    var chips = "";
+    if (m.passages.length > 1) {
+      chips = '<div class="chips" role="group" aria-label="Scripture passages">' +
+        m.passages.map(function (p, pi) {
+          return '<button class="chip" type="button" data-m="' + i + '" data-p="' + pi + '" aria-pressed="' +
+            (pi === state.chosen[i]) + '">' + esc(refLabel(p)) + "</button>";
+        }).join("") + "</div>";
+    }
+    var p = m.passages[state.chosen[i]];
+    return '<article class="slide" id="slide' + i + '" aria-label="' + ORDINALS[i] + ' mystery"><div class="slide-inner">' +
+      "<div><p class=\"eyebrow\">The " + ORDINALS[i] + " " + SETS[state.set].name + " Mystery</p>" +
+      '<h2 class="title">' + esc(m.title) + "</h2></div>" +
+      '<div class="fruit"><span class="label">Fruit of the mystery</span><p class="virtue">' + fruitHTML(m.fruit) + "</p></div>" +
+      chips +
+      '<section class="reading"><p class="ref">' + esc(refLabel(p)) + '</p><div class="text">' + passageHTML(p) + "</div></section>" +
+      "</div></article>";
+  }
+
+  function renderSet(key) {
+    state.set = key;
+    state.index = 0;
+    state.chosen = SETS[key].mysteries.map(function () { return 0; });
+    document.body.setAttribute("data-set", key);
+    $("day").textContent = WEEKDAYS[state.weekday] + (key === BY_WEEKDAY[state.weekday] ? "" : " · chosen");
+    $("setName").textContent = "The " + SETS[key].name + " Mysteries";
+    track.innerHTML = SETS[key].mysteries.map(slideHTML).join("");
+    beads.innerHTML = SETS[key].mysteries.map(function (_, i) {
+      return '<button class="bead" type="button" data-i="' + i + '" aria-label="' + ORDINALS[i] + ' mystery"></button>';
+    }).join("");
+    track.scrollLeft = 0;
+    syncBeads();
+  }
+
+  function renderReading(i) {
+    var m = SETS[state.set].mysteries[i], slide = $("slide" + i);
+    var p = m.passages[state.chosen[i]];
+    slide.querySelector(".ref").textContent = refLabel(p);
+    slide.querySelector(".text").innerHTML = passageHTML(p);
+    slide.querySelectorAll(".chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(Number(c.dataset.p) === state.chosen[i]));
+    });
+  }
+
+  function syncBeads() {
+    beads.querySelectorAll(".bead").forEach(function (b, i) {
+      if (i === state.index) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+    });
+    $("prev").disabled = state.index === 0;
+    $("next").disabled = state.index === SETS[state.set].mysteries.length - 1;
+  }
+
+  function go(i) {
+    var n = SETS[state.set].mysteries.length;
+    i = Math.max(0, Math.min(n - 1, i));
+    track.scrollTo({ left: i * track.clientWidth, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  // Events
+  track.addEventListener("scroll", function () {
+    var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if (i !== state.index) { state.index = i; syncBeads(); }
+  }, { passive: true });
+
+  track.addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip");
+    if (!chip) return;
+    var i = Number(chip.dataset.m);
+    state.chosen[i] = Number(chip.dataset.p);
+    renderReading(i);
+  });
+
+  beads.addEventListener("click", function (e) {
+    var b = e.target.closest(".bead");
+    if (b) go(Number(b.dataset.i));
+  });
+  $("prev").addEventListener("click", function () { go(state.index - 1); });
+  $("next").addEventListener("click", function () { go(state.index + 1); });
+
+  document.addEventListener("keydown", function (e) {
+    if (!sheet.hidden) { if (e.key === "Escape") closeSheet(); return; }
+    if (e.key === "ArrowRight") go(state.index + 1);
+    if (e.key === "ArrowLeft") go(state.index - 1);
+  });
+
+  window.addEventListener("resize", function () {
+    track.scrollLeft = state.index * track.clientWidth;
+  });
+
+  // Set picker
+  function openSheet() {
+    var today = BY_WEEKDAY[state.weekday];
+    $("opts").innerHTML = ORDER.map(function (k) {
+      return '<button class="opt" type="button" data-set="' + k + '" aria-current="' + (k === state.set) + '">' +
+        '<span><span class="opt-name">' + SETS[k].name + "</span>" +
+        (k === today ? '<span class="opt-today">Today</span>' : "") + "</span>" +
+        '<span class="opt-days">' + SETS[k].days + "</span></button>";
+    }).join("");
+    sheet.hidden = false;
+    var cur = $("opts").querySelector('[aria-current="true"]');
+    if (cur) cur.focus();
+  }
+  function closeSheet() { sheet.hidden = true; $("setBtn").focus(); }
+
+  $("setBtn").addEventListener("click", openSheet);
+  sheet.addEventListener("click", function (e) {
+    var opt = e.target.closest(".opt");
+    if (opt) {
+      var k = opt.dataset.set;
+      try { history.replaceState(null, "", k === BY_WEEKDAY[state.weekday] ? location.pathname : "#" + k); } catch (err) {}
+      renderSet(k);
+      closeSheet();
+    } else if (e.target === sheet) {
+      closeSheet();
+    }
+  });
+
+  // Keep the screen awake while praying, where the browser allows it.
+  var wakeLock = null;
+  function holdScreen() {
+    if (!("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+    navigator.wakeLock.request("screen").then(function (l) { wakeLock = l; }).catch(function () {});
+  }
+
+  // When the app comes back on a new day, show that day's mysteries.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible") return;
+    holdScreen();
+    var d = new Date().getDay();
+    if (d !== state.weekday) {
+      state.weekday = d;
+      try { history.replaceState(null, "", location.pathname); } catch (err) {}
+      renderSet(BY_WEEKDAY[d]);
+    }
+  });
+
+  window.addEventListener("hashchange", function () {
+    var k = location.hash.slice(1);
+    if (SETS[k] && k !== state.set) renderSet(k);
+  });
+
+  var fromHash = location.hash.slice(1);
+  renderSet(SETS[fromHash] ? fromHash : BY_WEEKDAY[state.weekday]);
+  holdScreen();
+})();
+</script>
+</body>
+</html>

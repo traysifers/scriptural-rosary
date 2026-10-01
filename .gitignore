@@ -1,0 +1,3 @@
+*.epub
+.wrangler/
+node_modules/
