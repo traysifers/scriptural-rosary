@@ -1,5 +1,7 @@
 # Scriptural Rosary
 
+**Open the app:** https://traysifers.github.io/scriptural-rosary/ (on a phone, Share → Add to Home Screen to open it full screen).
+
 A one-screen phone app for praying the scriptural Rosary. It opens to the day's mysteries:
 
 | Day | Mysteries |
